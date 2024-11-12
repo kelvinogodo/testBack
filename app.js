@@ -282,123 +282,79 @@ app.get('/api/getData', async (req, res) => {
   }
 })
 
-app.get('/api/getp2pdata', async (req, res) => {
-  // { _id: '66542351827fedb29a501401' }
-  const data = await P2p.findOne()
-  return res.json({ status: 'ok', data })
+app.get('/:id/refer', async(req,res)=>{
+  try {
+    const user = await User.findOne({username:req.params.id})
+    if(!user){
+      return res.json({status:400})
+    }
+    res.json({status:200,referredUser:req.params.id})
+  } catch (error) {
+    console.log(error)
+    res.json({status:`internal server error ${error}`})
+  }
 })
 
 
-app.patch('/api/updateUserPassword', async (req, res) => {
+app.get('/api/getData', async (req, res) => {
   const token = req.headers['x-access-token']
   try {
     const decode = jwt.verify(token, 'secret1258')
     const email = decode.email
     const user = await User.findOne({ email: email })
-
-    if (user.password !== req.body.currentPass) {
-      return res.json({ status: 400, message: "invaild password" })
-    }
-    else {
-        await User.updateOne({
-          email: user.email
-        }, {
-          $set: { 
-            password: req.body.password
-          }
-        })
-      console.log({
-        msg: "hello dear i want to validate this data",
-        image: user.password
-      })
-      return res.json({ status: 200, message: "password reset successful" })
-    }
-  } catch (error) {
-    console.log(error)
-    return res.json({ status: 500, message: "Something went wrong, please try again later" })
-  }
-})
-
-app.post('/api/updateUserData', async (req, res) => {
-  const token = req.headers['x-access-token']
-  try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email
-    const user = await User.findOne({ email: email })
-
-    if (user && req.body.profilepicture !== undefined) {
-      if (user.phonenumber !== req.body.phonenumber || user.state !== req.body.state || user.profilepicture !== req.body.profilepicture) {
-        await User.updateOne({
-          email: user.email
-        }, {
-          $set: {
-            phonenumber: req.body.phonenumber,
-            profilepicture: req.body.profilepicture,
-            state: req.body.state,
-            zipcode: req.body.zipcode,
-            country: req.body.country,
-            address: req.body.address,
-            firstname: req.body.firstname,
-            lastname: req.body.lastname
-          }
-        })
-      }
-      return res.json({ status: 200 })
-    }
-    else {
-      console.log({
-        msg: "hello dear i want to validate this",
-        image: user.profilepicture
-      })
-      return res.json({ stauts: 400, profile: user.profilepicture })
-    }
-  } catch (error) {
-    console.log(error)
-    return res.json({ status: 500 })
-  }
-})
-
-
-app.post('/api/changeWithdrawalMsg', async (req, res) => {
-  try {
-    const msg = req.body.msg
-    console.log({
-      msg
-    })
-
-    const text = await Withdraw.find()
-
-  if(text.length === 0) {
-    console.log("no messages here")
-
-    await Withdraw.create({
-      message: msg,
-      
-    })
-    
-    res.json({ status: 'ok', message: "message changed"})
-  }
-  else {
-    await Withdraw.updateOne({
-      $set: {
-        message: msg,
-      }
-    })
-    return res.json({
+    res.json({
       status: 'ok',
-      message: "message changed successfully"
+      firstname: user.firstname,
+      lastname: user.lastname,
+      username:user.username,
+      email: user.email,
+      funded: user.funded,
+      invest: user.investment,
+      transaction: user.transaction,
+      withdraw: user.withdraw,
+      refBonus:user.refBonus,
+      referred:user.referred,
+      referral:user.referral,
+      phonenumber:user.phonenumber,
+      state:user.state,
+      zipcode:user.zipcode,
+      address:user.address,
+      profilepicture:user.profilepicture,
+      country:user.country,
+      totalprofit:user.totalprofit,
+      totaldeposit:user.totaldeposit,
+      totalwithdraw:user.totalwithdraw,
+      deposit:user.deposit,
+      promo:user.promo,
+      periodicProfit:user.periodicProfit
     })
-  }
-
   } catch (error) {
-    console.log(error)
     res.json({ status: 'error' })
   }
 })
 
-app.get('/api/wmessage', async (req, res) => {
-  const text = await Withdraw.findOne();
-   res.json({message: text.message})
+
+app.post('/api/updateUserData', async(req,res)=>{
+  const token = req.headers['x-access-token']
+  try {
+    const decode = jwt.verify(token, 'secret1258')
+    const email = decode.email
+    const user = await User.findOne({ email: email })
+    if(user && req.body.profilepicture !== undefined){
+      if(user.phonenumber !== req.body.phonenumber || user.state !== req.body.phonenumber || user.profilepicture !== req.body.profilepicture){
+        await User.updateOne({
+          email:user.email
+        },{$set:{phonenumber: req.body.phonenumber,profilepicture : req.body.profilepicture,state:req.body.state,zipcode:req.body.zipcode,country:req.body.country,address:req.body.address}})
+      }
+      return res.json({status:200})
+  }
+  else{
+    return res.json({stauts:400})
+  }
+  } catch (error) {
+    console.log(error)
+    return res.json({status:500})
+  }
 })
 
 
@@ -407,686 +363,208 @@ app.post('/api/fundwallet', async (req, res) => {
   try {
     const email = req.body.email
     const incomingAmount = req.body.amount
-    const acct = req.body.acct
     const user = await User.findOne({ email: email })
-    console.log({
-      acct,incomingAmount,email
-    })
-
-  if(acct === 'funded') {
-
     await User.updateOne(
-      { email: email }, {
-      $set: {
+      { email: email },{
+      $set : {
         funded: incomingAmount + user.funded,
-        capital: incomingAmount + user.capital
-      }
-    }
+        capital :user.capital + incomingAmount,
+        totaldeposit: user.totaldeposit + incomingAmount
+      }}
     )
-    await User.updateOne(
-      { email: email },
-      {
-        $push: {
-          deposit: {
-            date: new Date().toLocaleString(),
-            amount: incomingAmount,
-            id: crypto.randomBytes(8).toString("hex"),
-            balance: incomingAmount + user.funded
-          }, 
-        //   transaction: {
-        //   type: 'Deposit',
-        //   amount: incomingAmount,
-        //   date: new Date().toLocaleString(),
-        //   balance: incomingAmount + user.funded,
-        //   id: crypto.randomBytes(8).toString("hex"),
-        // }
+    const upline = await User.findOne({ username: user.upline })
+    if (upline) {
+      await User.updateOne({ username: user.upline }, {
+        $set: {
+          refBonus: 10 / 100 * incomingAmount,
+          totalprofit: upline.totalprofit + (10 / 100 * incomingAmount),
+          capital: upline.capital + (10 / 100 * incomingAmount),
+          funded: upline.funded + (10 / 100 * incomingAmount),
         }
-      }
-    )
-    res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-  }
-  else if(acct === 'capital') {
-
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        capital: incomingAmount + user.capital
-      }
-    }
-    )
-   return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-  }
-  else if(acct === 'refBonus') {
-
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        refBonus: incomingAmount + user.refBonus
-      }
-    }
-    )
-   return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-  }
-  else if(acct === 'totalprofit') {
-
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        totalprofit: incomingAmount + user.totalprofit
-      }
-    }
-    )
-   return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-  }
-  else {
-    return res.json({
-      status: 400,
-      message: "Sorry something went wrong."
-    })
-  }
-
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' })
-  }
-})
-
-// api for debit acct
-app.post('/api/debitwallet', async (req, res) => {
-  try {
-    const email = req.body.email
-    const incomingAmount = req.body.amount
-    const acct = req.body.acct
-    const user = await User.findOne({ email: email })
-    console.log({
-      acct,incomingAmount,email
-    })
-
-  if(acct === 'funded') {
-
-    if(incomingAmount >= user.funded) {
-      return res.json({status: 400, message: "Insufficent balance chief"})
-    } else {
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        funded: user.funded - incomingAmount
-      }
-    }
-    )
-    return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-    }
-  }
-  else if(acct === 'capital') {
-
-    if(incomingAmount >= user.capital) {
-      return res.json({status: 400, message: "Insufficent balance chief"})
-    } else {
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        capital: user.capital - incomingAmount
-      }
-    }
-    )
-    return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-    }
-  }
-  else if(acct === 'refBonus') {
-
-    if(incomingAmount >= user.refBonus) {
-      return res.json({status: 400, message: "Insufficent balance chief"})
-    } else {
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        refBonus: user.refBonus - incomingAmount
-      }
-    }
-    )
-   return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-  }
-  }
-  else if(acct === 'totalprofit') {
-
-    if(incomingAmount >= user.totalprofit) {
-      return res.json({status: 400, message: "Insufficent balance chief"})
-    } else {
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        totalprofit: user.totalprofit - incomingAmount
-      }
-    }
-    )
-   return res.json({ status: 'ok', funded: req.body.amount, name: user.username, email: user.email })
-  }
-  }  else {
-    return res.json({
-      status: 400,
-      message: "Sorry something went run."
-    })
-  }
-
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' })
-  }
-})
-
-app.post('/api/changewallet', async (req, res) => {
-  try {
-    const Xrp = req.body.Xrp
-    const Eth = req.body.Eth
-    const Btc = req.body.Btc
-    const Usdt = req.body.Usdt
-    const Shib = req.body.Shib
-    const Bnb = req.body.Bnb
-    const Dodge = req.body.Dodge
-    const Tesla = req.body.Tesla
-    console.log({
-      Xrp,Usdt,Tesla
-    })
-
-    const myWallet = await Wallet.find()
-
-  if(myWallet.length === 0) {
-    console.log("no wallets here")
-
-    await Wallet.create({
-      ETH: Eth,
-      XRP: Xrp,
-      BTC: Btc,
-      USDT: Usdt,
-      DODGE: Dodge,
-      BNB: Bnb,
-      SHIB: Shib,
-      TESLA: Tesla,
-      
-    })
-    
-    res.json({ status: 'ok'})
-  }
-  else {
-    await Wallet.updateMany({
-      $set: {
-        ETH: Eth,
-        XRP: Xrp,
-        BTC: Btc,
-        USDT: Usdt,
-        DODGE: Dodge,
-        BNB: Bnb,
-        SHIB: Shib,
-        TESLA: Tesla
-      }
-    })
-    return res.json({
-      status: 'ok',
-      message: "Wallet changed successfully"
-    })
-  }
-
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' })
-  }
-})
-
-app.post('/api/changeTRCwallet', async (req, res) => {
-  try {
-    const Trc = req.body.Trc
-    console.log({
-      Trc
-    })
-
-    const myWallet = await Wallet.find()
-
-  if(myWallet.length === 0) {
-    console.log("no wallets here")
-
-    await Wallet.create({
-      TRC: Trc
-    })
-    
-    res.json({ status: 'ok'})
-  }
-  else {
-    await Wallet.updateMany({
-      $set: {
-        TRC: Trc,
-      }
-    })
-    return res.json({
-      status: 'ok',
-      message: "Wallet changed successfully"
-    })
-  }
-
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' })
-  }
-})
-
-app.get('/api/wallets', async (req, res) => {
-  const address = await Wallet.findOne();
-  return res.json(address)
-})
-
-
-app.post('/api/changeSocials', async (req, res) => {
-  try {
-    const social = req.body.social
-    console.log({
-      social
-    })
-
-    const link = await Social.find()
-
-  if(link.length === 0) {
-    console.log("no wallets here")
-
-    await Social.create({
-      whatsapp: social,
-      
-    })
-    
-    res.json({ status: 'ok', message: "link changed chief"})
-  }
-  else {
-    await Social.updateOne({
-      $set: {
-        whatsapp: social,
-      }
-    })
-    return res.json({
-      status: 'ok',
-      message: "Social link changed successfully"
-    })
-  }
-
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' })
-  }
-})
-
-app.get('/api/socials', async (req, res) => {
-  const link = await Social.findOne();
-   res.json(link)
-})
-
-app.post('/api/placetrade', async (req, res) => {
-  const token = req.headers['x-access-token']
-  try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email    
-    const incomingAmount = req.body.amount
-
-    const type = "gain"
-    const pair = req.body.pair
-    const stake = req.body.stake
-    const action = req.body.action
-    const user = await User.findOne({ email: email })
-
-    if(!user) {
-      return res.json({
-        status: 400,
-        message: "Sorry, something went wrong"
       })
     }
-    else {
-      if(user.demobal >= incomingAmount) {
+
     await User.updateOne(
       { email: email },
       {
-        $push: {
-          transaction: {
-          type: type,
+        $push : {
+          deposit:{
+            date:new Date().toLocaleString(),
+            amount:incomingAmount,
+            id:crypto.randomBytes(32).toString("hex"),
+            balance: incomingAmount + user.funded}
+        },transaction: {
+          type:'Deposit',
           amount: incomingAmount,
           date: new Date().toLocaleString(),
-          pair,
-          stake,
-          action,
-          id: crypto.randomBytes(8).toString("hex"),
-        }
-        }
-      }
+          balance: incomingAmount + user.funded,
+          id:crypto.randomBytes(32).toString("hex"),
+      }}
     )
-    await User.updateOne(
-      { email: email },
-      {
-        $set: {
-          demobal: user.demobal - incomingAmount
-        }
-      }
-    )
-    res.json({ status: 200, message: "Done" })
-        
-      }
-      else {
-        return res.json({status: 400, message: "something went wrong"})
-      }
-  }
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 200, message: error.message })
-  }
-})
 
-app.post('/api/placetradereal', async (req, res) => {
-  const token = req.headers['x-access-token']
-  try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email    
-    const incomingAmount = req.body.amount
-
-    const type = "gain"
-    const pair = req.body.pair
-    const stake = req.body.stake
-    const action = req.body.action
-    const user = await User.findOne({ email: email })
-
-    if(!user) {
-      return res.json({
-        status: 400,
-        message: "Sorry, something went wrong"
-      })
+    if (upline) {
+        res.json({
+        status: 'ok',
+        funded: req.body.amount,
+        name: user.firstname,
+        email: user.email,
+        message: `your account has been credited with $${incomingAmount} USD. you can proceed to choosing your preferred investment plan to start earning. Thanks.`,
+        subject: 'Deposit Successful',
+        uplineName: upline.firstname,
+        uplineEmail: upline.email,
+        uplineSubject: `Earned Referral Commission`,
+        uplineMessage:`Congratulations! You just earned $${10/100 * incomingAmount} in commission from ${user.firstname} ${user.lastname}'s deposit of $${incomingAmount}.`
+    })
     }
     else {
-      if(user.funded >= incomingAmount) {
-    await User.updateOne(
-      { email: email },
-      {
-        $push: {
-          transaction: {
-          type: type,
-          amount: incomingAmount,
-          date: new Date().toLocaleString(),
-          pair,
-          stake,
-          action,
-          id: crypto.randomBytes(8).toString("hex"),
-        }
-        }
-      }
-    )
-    await User.updateOne(
-      { email: email },
-      {
-        $set: {
-          funded: user.funded - incomingAmount
-        }
-      }
-    )
-    res.json({ status: 200, message: "Done" })
-        
-      }
-      else {
-        return res.json({status: 400, message: "something went wrong"})
-      }
-  }
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 200, message: error.message })
-  }
-})
-
-app.post('/api/placetradefunded', async (req, res) => {
-  const token = req.headers['x-access-token']
-  try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email    
-    const incomingAmount = req.body.amount
-
-    const type = "gain"
-    const pair = req.body.pair
-    const stake = req.body.stake
-    const action = req.body.action
-    const user = await User.findOne({ email: email })
-
-    if(!user) {
-      return res.json({
-        status: 400,
-        message: "Sorry, something went wrong"
-      })
+      res.json({
+      status: 'ok',
+      funded: req.body.amount,
+      name: user.firstname,
+      email: user.email,
+      message: `your account has been credited with $${incomingAmount} USD. you can proceed to choosing your preferred investment plan to start earning. Thanks.`,
+      subject: 'Deposit Successful',
+      upline:null
+    })
     }
-    else {
-      if(user.fundedacctbal >= incomingAmount) {
-    await User.updateOne(
-      { email: email },
-      {
-        $push: {
-          ftransaction: {
-          type: type,
-          amount: incomingAmount,
-          date: new Date().toLocaleString(),
-          pair,
-          stake,
-          action,
-          id: crypto.randomBytes(8).toString("hex"),
-        }
-        }
-      }
-    )
-    await User.updateOne(
-      { email: email },
-      {
-        $set: {
-          fundedacctbal: user.fundedacctbal - incomingAmount
-        }
-      }
-    )
-    res.json({ status: 200, message: "Done" })
-        
-      }
-      else {
-        return res.json({status: 400, message: "something went wrong"})
-      }
-  }
+    
   } catch (error) {
     console.log(error)
-    res.json({ status: 200, message: error.message })
+    res.json({ status: 'error' })
   }
 })
 
-
-// admin trade history
-app.post('/api/adminTransactions', async (req, res) => {
-  try {
-    const email = req.body.email
-    const incomingAmount = req.body.amount
-    const type = req.body.type
-    const pair = req.body.pair
-    const stake = req.body.stake
-    const action = req.body.action
-    const user = await User.findOne({ email: email })
-
-    await User.updateOne(
-      { email: email },
-      {
-        $push: {
-          transaction: {
-          type: type,
-          amount: incomingAmount,
-          date: new Date().toLocaleString(),
-          pair,
-          stake,
-          action,
-          id: crypto.randomBytes(8).toString("hex"),
-        }
-        }
-      }
-    )
-    res.json({ status: 'ok', message: "updated" })
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 200, message: error.message })
+app.post('/api/admin', async (req, res) => {
+  const admin = await Admin.findOne({email:req.body.email})
+  if(admin){
+      return res.json({status:200})
+  }
+  else{
+    return res.json({status:400})
   }
 })
-
-app.post('/api/adminnotification', async (req, res) => {
-  try {
-    const email = req.body.email
-    const title = req.body.title
-    const msg = req.body.msg
-    const user = await User.findOne({ email: email })
-
-    if(!user) {
-      return res.json({status: 400, message: "Chief, User does not exist."})
-    } else {
-
-    await User.updateOne(
-      { email: email },
-      {
-        $push: {
-          notification: {
-          title,
-          body: msg,
-          date: new Date().toLocaleString(),
-          id: crypto.randomBytes(8).toString("hex"),
-        }
-        }
-      }
-    )
-    res.json({ status: 'ok', message: "updated" })
-  }
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 200, message: error.message })
-  }
-})
-
-
 
 
 app.post('/api/deleteUser', async (req, res) => {
   try {
-    await User.deleteOne({ email: req.body.email })
-    return res.json({ status: 200 })
+      await User.deleteOne({email:req.body.email})
+      return res.json({status:200})
   } catch (error) {
-    return res.json({ status: 500, msg: `${error}` })
+    return res.json({status:500,msg:`${error}`})
   }
 })
 
-app.post('/api/withdraw', async (req, res) => {
+app.post('/api/upgradeUser', async (req, res) => {
   try {
     const email = req.body.email
+    const incomingAmount = req.body.amount
     const user = await User.findOne({ email: email })
-    if (user.funded >= req.body.WithdrawAmount) {
+    if (user) {
       await User.updateOne(
-        { email: email },
-        { $set: { funded: user.funded - req.body.WithdrawAmount, totalwithdraw: user.totalwithdraw + req.body.WithdrawAmount } }
-      )
-      await User.updateOne(
-        { email: email },
-        {
-          $push: {
-            withdraw: {
-              date: new Date().toLocaleString(),
-              amount: req.body.WithdrawAmount,
-              id: crypto.randomBytes(8).toString("hex"),
-              balance: user.funded - req.body.WithdrawAmount,
-              status: 'Success'
-            }
-          }
+        { email: email }, {
+        $set: {
+          funded: incomingAmount + user.funded,
+          capital: user.capital + incomingAmount,
+          totalProfit: user.totalprofit + incomingAmount,
+          periodicProfit: user.periodicProfit + incomingAmount
         }
+      }
       )
-      // const now = new Date()
-      // await User.updateOne(
-      //   { email: email },
-      //   {
-      //     $push: {
-      //       transaction: {
-      //         type: 'withdraw',
-      //         amount: req.body.WithdrawAmount,
-      //         date: now.toLocaleString(),
-      //         balance: user.funded - req.body.WithdrawAmount,
-      //         id: crypto.randomBytes(32).toString("hex"),
-      //       }
-      //     }
-      //   }
-      // )
-
-      res.json({ status: 'ok', 
-      withdraw: req.body.WithdrawAmount, 
-      name: user.username, 
-      email: user.email,
-      message: "Kindly wait as we proccess your withdrawal" 
-    })
-    }
-    else {
-      res.json({ status: 400, message: 'Sorry! Insufficient balance' })
+      res.json({
+        status: 'ok',
+        funded: req.body.amount
+      })
     }
   }
   catch (error) {
-    console.log(error)
-    res.json({ status: 'error', message: 'Internal server error' })
+    res.json({
+        status: 'error',
+      })
   }
+    
+
 })
 
-app.post('/api/withdrawxx', async (req, res) => {
+app.post('/api/withdraw', async (req, res) => {
   const token = req.headers['x-access-token']
   try {
     const decode = jwt.verify(token, 'secret1258')
     const email = decode.email
     const user = await User.findOne({ email: email })
-    if (user.funded >= req.body.WithdrawAmount) {
+    if (user.totalprofit >= req.body.WithdrawAmount ) {
       await User.updateOne(
         { email: email },
-        {
-          $push: {
-            withdraw: {
-              date: new Date().toLocaleString(),
-              amount: req.body.WithdrawAmount,
-              id: crypto.randomBytes(8).toString("hex"),
-              balance: user.funded - req.body.WithdrawAmount,
-              status: 'pending'
-            }
-          }
-        }
+        { $set: { funded: user.funded - req.body.WithdrawAmount, totalwithdraw: user.totalwithdraw + req.body.WithdrawAmount, capital: user.capital - req.body.WithdrawAmount, totalprofit: user.totalprofit - req.body.WithdrawAmount }}
       )
-
-      res.json({ status: 'ok', 
-      withdraw: req.body.WithdrawAmount, 
-      name: user.username, 
+      await User.updateOne(
+        { email: email },
+        { $push: { withdraw: {
+          date:new Date().toLocaleString(),
+          amount:req.body.WithdrawAmount,
+          id:crypto.randomBytes(32).toString("hex"),
+          balance: user.funded - req.body.WithdrawAmount
+        } } }
+      )
+      const now = new Date()
+      await User.updateOne(
+        { email: email },
+        { $push: { transaction: {
+          type:'withdraw',
+          amount: req.body.WithdrawAmount,
+          date: now.toLocaleString(),
+          balance: user.funded - req.body.WithdrawAmount,
+          id:crypto.randomBytes(32).toString("hex"),
+        } } }
+      )
+      return res.json({
+            status: 'ok',
+            withdraw: req.body.WithdrawAmount,
+            email: user.email,
+            name: user.firstname,
+            message: `We have received your withdrawal order, kindly exercise some patience as our management board approves your withdrawal`,
+            subject: 'Withdrawal Order Alert',
+            adminMessage: `Hello Jeffery! a user with the name ${user.firstname} placed withdrawal of $${req.body.WithdrawAmount} USD, to be withdrawn into ${req.body.wallet} ${req.body.method} wallet`,
+      })
+    }
+   
+  else{
+      res.json({
+      status: 400,
+      subject:'Failed Withdrawal Alert',
       email: user.email,
-      message: "Kindly wait as we proccess your withdrawal" 
-    })
-    }
-    else {
-      res.json({ status: 400, message: 'Sorry! Insufficient balance' })
-    }
-  }
-  catch (error) {
+      name: user.firstname,
+      withdrawMessage:`We have received your withdrawal order, but you can only withdraw your profits. Kindly invest more, to rack up more profit, Thanks.`
+      })
+  }}
+   catch (error) {
     console.log(error)
-    res.json({ status: 'error', message: 'Internal server error' })
+    res.json({ status: 'error',message:'internal server error' })
   }
 })
 
-// api for fundedaccoun
-app.post('/api/fundedaccount', async (req, res) => {
+app.post('/api/sendproof', async (req,res)=>{
+  const token = req.headers['x-access-token']
   try {
-    const email = req.body.email
-    const amount = req.body.amount
+    const decode = jwt.verify(token, 'secret1258')
+    const email = decode.email
     const user = await User.findOne({ email: email })
-    if (user) {
-      await User.updateOne(
-        { email: email },
-        { $set: { fundedacctbal: amount, isfunded: true } }
-      )
-      res.json({ status: 'ok', 
-      message: "Account Activated" 
-    })
+    if(user){
+            return res.json({
+            status: 200,
+            email: user.email,
+            name: user.firstname,
+            message: `Hi! you have successfully placed a deposit order, kindly exercise some patience as we verify your deposit. Your account will automatically be credited with $${req.body.amount} USD after verification.`,
+            subject: 'Pending Deposit Alert',
+            adminMessage: `A user with the name.${user.firstname}, just deposited $${req.body.amount} USD into to your ${req.body.method} wallet. please confirm deposit and credit.`,
+            adminSubject:'Deposit Alert'
+      })
     }
-    else {
-      res.json({ status: 400, message: 'Sorry! user does not exist' })
+    else{
+      return res.json({status:500})
     }
-  }
-  catch (error) {
-    console.log(error)
-    res.json({ status: 'error', message: 'Internal server error' })
-  }
+    } catch (error) {
+      res.json({status:404})
+    }
 })
 
 
@@ -1135,633 +613,344 @@ app.post('/api/login', async (req, res) => {
   }
 })
 
-// api for connecting the copy trading account
-app.patch('/api/connectcopytradingacct', async (req, res) => {
-  const reg = req.body.traderId
-  const user = await User.findOne({ regNo: reg })
-  const email = req.body.traderEmail
-
-  if(user) {
-    if (user.connected === false) {
-      
-   await User.updateOne(
-    {regNo: reg},
-    {
-      $set: {
-        connector: email,
-        connected: true
-      }
-    })
-    
-  return res.json({status: 200, message: "Account connected"})
-    } 
-    else {
-      await User.updateOne(
-       {regNo: reg},
-       {
-         $set: {
-           connector: " ",
-           connected: false
-         }
-       })
-       
-     return res.json({status: 200, message: "Account disconnected"})
-    }
-
-  } else {
-    return res.json({status: 400, message: "this user does not exist"})
-  }
-})
-
-
-app.patch('/api/p2pdetails', async (req, res) => {
-  const hey = await P2p.updateOne(
-    // { _id: '66542351827fedb29a501401' },
-    {
-      $set: {
-        price: req.body.price,
-        accountNo: req.body.accountNo,
-        accountName: req.body.accountName,
-        bankName: req.body.bankName
-      }
-    })
-  // 66542351827fedb29a501401
-  console.log(hey)
-  return res.send(hey)
-})
-
-app.post('/api/p2ptran', async (req, res) => {
-  const token = req.headers['x-access-token']
-  try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email
-    const user = await User.findOne({ email: email })
-
-    const convertedAmt = req.body.convertTo;
-
-    await User.updateOne(
-      { email: email }, {
-      $set: {
-        // funded: convertedAmt + user.funded,
-        // capital :user.capital + convertedAmt,
-        totaldeposit: user.totaldeposit + convertedAmt
-      },
-    })
-
-    await User.updateOne(
-      { email: email },
-      {
-        $push: {
-          deposit: { 
-            date: new Date().toLocaleString(),
-            amount: convertedAmt,
-            id: crypto.randomBytes(8).toString("hex"),
-            balance: convertedAmt + user.funded
-          }
-        }, transaction: {
-          type: 'P2p Deposit',
-          amount: convertedAmt,
-          date: new Date().toLocaleString(),
-          balance: convertedAmt + user.funded,
-          id: crypto.randomBytes(8).toString("hex"),
-        }
-      }
-    )
-    res.json({ status: 'ok', funded: req.body.convertedAmt, name: user.name, email: user.email })
-
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' })
-  }
-
-})
-
-
-app.post('/api/userdet', async (req, res) => {
-  const receiver = req.body.traderId
-  if(receiver !== Number) {
-  }
-
-  const result = await User.findOne({regNo: receiver})
-  if(!result) {
-    // console.log("invalid account details ma")
-    return res.json({status: 400, message: "invalid user details"})
-  }
-  else {
-  console.log(result.email)
-  return res.json({
-    status: 200,
-    email: result.email
-  })
-}
-})
-
 
 app.get('/api/getUsers', async (req, res) => {
-  // const users = await User.find()
-  const users = await User.find({ role: "user" });
+  const users = await User.find()
   res.json(users)
 })
 
-
-app.get('/api/getuserstat', async (req, res) => {
-  // hello i am right here
-  const users = await User.find({ role: "user" });
-  const verified = await User.find({ role: "user", verified: "true" });
-  const unverified = await User.find({ role: "user", verified: "false" });
-
-
-  return res.json({ users: users.length, verify: verified.length, unverified: unverified.length })
-})
-
 app.post('/api/invest', async (req, res) => {
-  const token = req.headers['x-access-token'];
+  const token = req.headers['x-access-token']
   try {
-    const decode = jwt.verify(token, 'secret1258');
-    const email = decode.email;
-    const user = await User.findOne({ email: email });
-    // const HOURS_IN_A_DAY = 24;
+    const decode = jwt.verify(token, 'secret1258')
+    const email = decode.email
+    const user = await User.findOne({ email: email })
 
-
-    const calculateDurationInMilliseconds = (durationInDays) => {
-      const millisecondsInADay = 24 * 60 * 60 * 1000;
-      return durationInDays * millisecondsInADay;
-    };
-
-    const calculateProfit = (amount, percent) => {
-      const Fv = (amount) * (1 + percent/100)**durationInDays 
-      const Pv = Fv - amount
-      console.log(Pv)
-      return Pv;
-      // return (amount * 1 + percent) / 100;
-    };
-
-    const durations = {
-      '3': 3,
-      '4': 4,
-      '7': 7,
-      '8': 8,
-      '10': 10,
-      '12': 12,
-    };
-
-    const duration = req.body.duration;
-    const percent = req.body.percent;
-    // !durations.hasOwnProperty(duration) |
-
-    if (!percent) {
-      console.log(duration)
-      console.log(percent)
-      return res.status(400).json({
-        message: 'Invalid duration or percentage provided.',
-      });
-    }
-
-
-    const durationInDays = durations[duration];
-    const durationInMilliseconds = calculateDurationInMilliseconds(durationInDays);
-    const profitPercent = parseFloat(percent.replace('%', ''));
-
-    const profit = calculateProfit(req.body.amount, profitPercent);
-
+    const money = (() => {
+      switch (req.body.percent) {
+        case '5%':
+          return (req.body.amount * 5) / 100
+        case '7%':
+          return (req.body.amount * 7) / 100
+        case '9%':
+          return (req.body.amount * 9) / 100
+        case '11%':
+          return (req.body.amount * 11) / 100
+        case '15%':
+          return (req.body.amount * 15) / 100
+        case '18%':
+          return (req.body.amount * 18) / 100
+      }
+    })()
     if (user.capital >= req.body.amount) {
-      const now = new Date();
-      const endDate = new Date(now.getTime() + durationInMilliseconds);
+      const now = new Date()
+      switch (req.body.duration) {
+        case '3 days':
+              await User.updateOne(
+                { email: email },
+                {
+                  $push: {investment:
+                    {
+                    type:'investment',
+                    amount : req.body.amount,
+                    plan: req.body.plan,
+                    percent:req.body.percent,
+                    startDate: now.toLocaleString(),
+                    endDate: now.setDate(now.getDate() + 432000).toLocaleString(),
+                    profit: money,
+                    ended:259200000,
+                    started:now.getTime(),
+                    periodicProfit:0
+                  },
+                  transaction:{
+                    type:'investment',
+                    amount: req.body.amount,
+                    date: now.toLocaleString(),
+                    balance: user.funded,
+                    id:crypto.randomBytes(32).toString("hex")
+                  }
+                }, $set :{totalprofit : user.totalprofit + (money *3)}
+              }
+              )
+          break;
+        case '4 days':
+          await User.updateOne(
+                { email: email },
+                {
+                  $push: {investment:
+                    {
+                    type:'investment',
+                    amount : req.body.amount,
+                    plan: req.body.plan,
+                    percent:req.body.percent,
+                    startDate: now.toLocaleString(),
+                    endDate: now.setDate(now.getDate() + 432000).toLocaleString(),
+                    profit: money,
+                    ended:345600000,
+                    started:now.getTime(),
+                    periodicProfit:0
+                  },
+                  transaction:{
+                    type:'investment',
+                    amount: req.body.amount,
+                    date: now.toLocaleString(),
+                    balance: user.funded,
+                    id:crypto.randomBytes(32).toString("hex")
+                  }
+                }, $set :{totalprofit : user.totalprofit + (money *4)}
+              }
+              )
+          break;
+        case '7 days':
+              await User.updateOne(
+                { email: email },
+                {
+                  $push: {investment:
+                    {
+                    type:'investment',
+                    amount : req.body.amount,
+                    plan: req.body.plan,
+                    percent:req.body.percent,
+                    startDate: now.toLocaleString(),
+                    endDate: now.setDate(now.getDate() + 432000).toLocaleString(),
+                    profit: money,
+                    ended:604800000,
+                    started:now.getTime(),
+                    periodicProfit:0
+                  },
+                  transaction:{
+                    type:'investment',
+                    amount: req.body.amount,
+                    date: now.toLocaleString(),
+                    balance: user.funded,
+                    id:crypto.randomBytes(32).toString("hex")
+                  }
+                }, $set :{totalprofit : user.totalprofit + (money *7)}
+              }
+              )
+          break;
+        case '8 days':
+              await User.updateOne(
+                { email: email },
+                {
+                  $push: {investment:
+                    {
+                    type:'investment',
+                    amount : req.body.amount,
+                    plan: req.body.plan,
+                    percent:req.body.percent,
+                    startDate: now.toLocaleString(),
+                    endDate: now.setDate(now.getDate() + 432000).toLocaleString(),
+                    profit: money,
+                    ended:691200000,
+                    started:now.getTime(),
+                    periodicProfit:0
+                  },
+                  transaction:{
+                    type:'investment',
+                    amount: req.body.amount,
+                    date: now.toLocaleString(),
+                    balance: user.funded,
+                    id:crypto.randomBytes(32).toString("hex")
+                  }
+                }, $set :{totalprofit : user.totalprofit + (money *8)}
+              }
+              )
+          break;
+        case '10 days':
+              await User.updateOne(
+                { email: email },
+                {
+                  $push: {investment:
+                    {
+                    type:'investment',
+                    amount : req.body.amount,
+                    plan: req.body.plan,
+                    percent:req.body.percent,
+                    startDate: now.toLocaleString(),
+                    endDate: now.setDate(now.getDate() + 432000).toLocaleString(),
+                    profit: money,
+                    ended:864000000,
+                    started:now.getTime(),
+                    periodicProfit:0
+                  },
+                  transaction:{
+                    type:'investment',
+                    amount: req.body.amount,
+                    date: now.toLocaleString(),
+                    balance: user.funded,
+                    id:crypto.randomBytes(32).toString("hex")
+                  }
+                }, $set : {totalprofit : user.totalprofit + (money * 10) }
+              }
+              )
+          break;
+        case '12 days':
+          await User.updateOne(
+            { email: email },
+            {
+              $push: {
+                investment:
+                {
+                  type: 'investment',
+                  amount: req.body.amount,
+                  plan: req.body.plan,
+                  percent: req.body.percent,
+                  startDate: now.toLocaleString(),
+                  endDate: now.setDate(now.getDate() + 432000).toLocaleString(),
+                  profit: money,
+                  ended: 103680000,
+                  started: now.getTime(),
+                  periodicProfit: 0
+                },
+                transaction: {
+                  type: 'investment',
+                  amount: req.body.amount,
+                  date: now.toLocaleString(),
+                  balance: user.funded,
+                  id: crypto.randomBytes(32).toString("hex")
+                }
+              }, $set : { totalprofit: user.totalprofit + (money * 12) }
+              }
+              )
+          break;
+      }
+      
       await User.updateOne(
         { email: email },
         {
-          $push: {
-            investment: {
-              type: 'investment',
-              amount: req.body.amount,
-              plan: req.body.plan,
-              percent: req.body.percent,
-              startDate: now.toLocaleString(),
-              endDate: endDate.toLocaleString(),
-              profit: profit,
-              ended: endDate.getTime(),
-              started: now.getTime(),
-              periodicProfit: profit,
-              period: duration
-            },
-            transaction: {
-              type: 'investment',
-              amount: req.body.amount,
-              date: now.toLocaleString(),
-              balance: user.funded,
-              id: crypto.randomBytes(6).toString('hex'),
-            },
-          },
+          $set: {capital : user.capital - req.body.amount, withdrawDuration: now.getTime()}
         }
-      );
-      await User.updateOne(
-        { email: email },
-        {
-          $set: {
-            capital: user.capital - req.body.amount,
-            totalprofit: user.totalprofit + profit,
-            withdrawDuration: now.getTime(),
-          },
-        }
-      );
-      return res.json({
-        status: 'ok',
-        amount: req.body.amount,
-        name: user.username,
-        email: user.email,
-        periodicProfit: profit,
-      });
+      )
+      res.json({ status: 'ok', amount: req.body.amount })
     } else {
-      return res.status(400).json({
-        message: 'You do not have sufficient funds in your account.',
-      });
+      res.json({
+        message: 'Insufficient capital!',
+        status:400
+      })
     }
   } catch (error) {
-    console.log(error)
-    return res.status(500).json({ status: 500, message: "something went wrong, try again later" });
+    return res.json({ status: 500 , error: error})
   }
-});
+})
 
-app.get('/api/cron', async (req, res) => {
-  const now = new Date();
 
-  try {
-    mongoose.connect(process.env.ATLAS_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    const users = await User.find();
-    const profitIncrement = (profit, periods) => profit / periods;
-    const stopInvestment = now.getTime();
-    console.log(stopInvestment);
-
-    let results = [];
-
-    for (const user of users) {
-      for (const investment of user.investment) {
-        if (stopInvestment < investment.ended) { // Check if the duration of 5 days is completed
-          const increment = profitIncrement(investment.profit, investment.period);
-          console.log({
-            endedDate: investment.ended,
-            started: investment.started,
-            increment,
-            investment: investment.profit
-          });
-
-          const addProfit = await User.updateOne(
-            { _id: user._id, 'investment.investmentId': investment.investmentId },
-            { 
-              $inc: { 
-                'investment.$.periodicProfit': +increment, 
-                'investment.$.amount': increment, 
-                funded: increment 
+const change = (users, now) => {
+  users.forEach((user) => {
+    user.investment.map(async (invest) => {
+      if (isNaN(invest.started)) {
+        console.log('investment is no a number')
+        res.json({message:'investment is no a number'})
+        // return
+      }
+      else if (user.investment == []) {
+        console.log('investment is not empty array')
+        res.json({message:'investment is an empty array'})
+        // return
+      }
+      if (now - invest.started >= invest.ended) {
+        console.log('investment completed')
+        res.json({message:'investment completed'})
+        return
+      }
+      else if (isNaN(invest.profit)) {
+        console.log('investment profit is not a number')
+        res.json({message:'investment profit is not a number'})
+        // return
+      }
+      else if (invest.profit <= 14) {
+        try {
+            await User.updateOne(
+              { email: user.email },
+              {
+                $set: {
+                  funded: user.funded + Math.round(11 / 100 * invest.profit),
+                  periodicProfit: user.periodicProfit + Math.round(11 / 100 * invest.profit),
+                  capital: user.capital + Math.round(11 / 100 * invest.profit),
+                }
+              }
+          )
+          console.log('investment increased by 11%')
+        } catch (error) {
+          console.log(error)
+        }
+        
+      }
+     
+      else if (invest.profit > 14 && invest.profit <= 40) {
+        try {
+              await User.updateOne(
+                { email: user.email },
+                {
+                  $set:{
+                    funded:user.funded + Math.round(6/100 * invest.profit),
+                    periodicProfit:user.periodicProfit + Math.round(6/100 * invest.profit),
+                    capital:user.capital + Math.round(6/100 * invest.profit),
+                  }
+                }
+          )
+             console.log('investment increased by 6%')
+        } catch (error) {
+             console.log(error)
+        }
+         
+        }
+      else {
+        try {
+          await User.updateOne(
+            { email: user.email },
+            {
+              $set:{
+                funded:user.funded + Math.round(4.5/100 * invest.profit),
+                periodicProfit:user.periodicProfit + Math.round(4.5/100 * invest.profit),
+                capital:user.capital + Math.round(4.5/100 * invest.profit),
               }
             }
-          );
-
-          if (addProfit) {
-            results.push({status: 200, userId: user._id, investmentId: investment.investmentId, date: stopInvestment});
-          } else {
-            results.push({status: 400, userId: user._id, investmentId: investment.investmentId, date: stopInvestment, end: investment.ended});
-          }
-        } else if (stopInvestment >= investment.ended) {
-          console.log("hello the investment has ended");
-          results.push({
-            status: 200,
-            userId: user._id,
-            investmentId: investment.investmentId,
-            message: "hello the investment has ended"
-          });
-        } else {
-          console.log("investment ended");
-          results.push({
-            status: 400,
-            userId: user._id,
-            investmentId: investment.investmentId,
-            message: "investment ended"
-          });
+          )
+          console.log('investment increased by 4.5%')
+        } catch (error) {
+          console.log(error)
         }
-      }
-    }
+          
+        }
+ })
+})
+}
 
-    // Return results after processing all users and investments
-    return res.json(results);
-  } catch (error) {
-    console.error('Error updating user balances:', error);
-    return res.json({
-      status: 500,
-      error
-    });
-  }
-});
 
-// api for transfer
-
-app.patch('/api/transferBal', async (req, res) => {
-  const token = req.headers['x-access-token']
+app.get('/api/cron', async (req, res) => {
   try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email
-    const user = await User.findOne({ email: email })
-    const accttype = req.body.accttype
-    const amt = parseInt(req.body.amt)
-
-    if (accttype === 'copyTrading') {
-      if(user.funded <= amt) {
-        return res.json({
-          status: 400,
-          message: 'Insufficient balance'
-        })
-      } else {
-          await User.updateOne({
-            email: user.email
-          }, {
-            $set: { 
-              copybal: user.copybal + amt
-            }
-          })
-          await User.updateOne({
-            email: user.email
-          }, {
-            $set: { 
-              funded: user.funded - amt,
-              netbal: user.copybal + user.funded
-            }
-          })
-        return res.json({ status: 200, message: "Transfer successful" })
-      }
-    }
-    else if(accttype === 'RealTrading') {
-      return res.json({
-        status: 400,
-        message: "Sorry you cannot perform this action"
-      })
-    }
-    else {
-      return res.json({ status: 400, message: "internal error" })
-    }
+      const users = (await User.find()) ?? []
+      const now = new Date().getTime()
+      change(users, now)
+      return res.json({status:200, message: 'updated successfuly'})
   } catch (error) {
     console.log(error)
-    return res.json({ status: 500, message: "Something went wrong, please try again later" })
+    return res.json({status:500, message:'error! timeout'})
   }
 })
 
-// transfring to realacct
-app.patch('/api/transferCopy', async (req, res) => {
-  const token = req.headers['x-access-token']
+// setInterval(async () => {
+//   // mongoose.connect(process.env.ATLAS_URI)
+//   const users = (await User.find()) ?? []
+//   const now = new Date().getTime()
+//   change(users, now)
+// }, 10000)
+
+app.post('/api/getWithdrawInfo', async (req, res) => {
   try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email
-    const user = await User.findOne({ email: email })
-    const accttype = req.body.accttype
-    const amt = parseInt(req.body.amt)
-
-    if (accttype === 'copyTrading') {
-      return res.json({
-        status: 400,
-        message: "Sorry you cannot perform this action"
-      })
-    }
-    else if(accttype === 'RealTrading') {
-      if(user.funded <= amt) {
-        return res.json({
-          status: 400,
-          message: 'Insufficient balance'
-        })
-      } else {
-          await User.updateOne({
-            email: user.email
-          }, {
-            $set: { 
-              funded: user.funded + amt
-            }
-          })
-          await User.updateOne({
-            email: user.email
-          }, {
-            $set: { 
-              copybal: user.copybal - amt,
-              netbal: user.copybal + user.funded
-            }
-          })
-        return res.json({ status: 200, message: "Transfer successful" })
-      }
-    }
-    else {
-      return res.json({ status: 400, message: "internal error" })
-    }
-  } catch (error) {
-    console.log(error)
-    return res.json({ status: 500, message: "Something went wrong, please try again later" })
-  }
-})
-
-
-app.patch('/api/transferRef', async (req, res) => {
-  const token = req.headers['x-access-token']
-  try {
-    const decode = jwt.verify(token, 'secret1258')
-    const email = decode.email
-    const user = await User.findOne({ email: email })
-
-    const amt = user.refBonus
-    console.log({amt, user: user.funded})
-
-    if(user) {
-      if(user.refBonus === 0 ) {
-        return res.json({
-          status: 400,
-          message: "Sorry you don't have sufficient referral bonus"
-        })
-      }else {
-          await User.updateOne({
-            email: user.email
-          }, {
-            $set: { 
-              funded: user.funded + amt
-            }
-          })
-          await User.updateOne({
-            email: user.email
-          }, {
-            $set: { 
-              refBonus: user.refBonus - amt,
-            }
-          })
-        return res.json({ status: 200, message: "Withdrawal successful" })
-      }
-    }
-    else {
-      return res.json({ status: 400, message: "internal error" })
-    }
-  } catch (error) {
-    console.log(error)
-    return res.json({ status: 500, message: "Something went wrong, please try again later" })
-  }
-})
-
-// app.get('/api/cronjob', async (req, res) => {
-//   const now = new Date();
-
-//   try {
-//     // mongoose.connect(process.env.ATLAS_URI)
-//     mongoose.connect(process.env.ATLAS_URI, {
-//       useNewUrlParser: true,
-//       useUnifiedTopology: true,
-//     })
-//     const users = (await User.find()) ?? []
-//     // const users = await User.find();
-//     const profitIncrement = (profit, periods) => profit / periods;
-//     const stopInvestment = now.getTime();
-//     console.log(stopInvestment)
-
-//     for (const user of users) {
-//       for (const investment of user.investment) {
-//         if (stopInvestment < investment.ended) { // Check if the duration of 5 days is completed
-//           const increment = profitIncrement(investment.profit, 5);
-//           console.log({
-//             endedDate: investment.ended,
-//             started: investment.started,
-//             increment,
-//             investment: investment.profit
-//           })
-
-//         const addprofit =  await User.updateOne(
-//             { _id: user._id, 'investment.investmentId': investment.investmentId },
-//             { $inc: { 
-//               'investment.$.periodicProfit': +increment, 
-//               // 'investment.$.amount': increment, 
-//               funded: +increment 
-//             } }
-//           );
-//           if (addprofit) {
-//             return res.json({status: 200, date: stopInvestment})
-//           } else {
-//             console.log("very bad stuff")
-//             return res.json({status: 400, date: stopInvestment, end: investment.ended})
-//           }
-//         }
-//         else if(stopInvestment >= investment.ended ) {
-//           console.log("hello the investment has ended")
-//           return res.json({
-//             message: "hello the investment has ended"
-//           })
-//         }
-//         else {
-//           console.log("investment ended")
-//           return res.json({
-//             status: 400,
-//             message: "investment ended"
-//           })
-//         }
-//       }
-//     }
-//   } catch (error) {
-//     console.error('Error updating user balances:', error);
-//     return res.json({
-//       status: 500,
-//       error
-//     })
-//   }
-// })
-
-
-
-
-// working on the forgotten password
-app.post('/api/forgottenpassword', async (req, res) => {
-  
-  try{
-  const user = await User.findOne({ email: req.body.email });
-
-  if (user) {
-  console.log(user)
-    console.log("hey there")
-
-  // const resetToken = user.createPasswordResetToken();
-  const resetToken =  crypto.randomBytes(32).toString('hex')
-  const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex')
-  const passwordResetExpires = Date.now() + 15 * 60 * 1000;
-
-
-  await user.save({ passwordResetToken, passwordResetExpires});
-
-  const resetURL = `${req.protocol}://${req.get(
-    'host'
-  )}/api/resetPassword/${resetToken}`;
-
-  console.log({
-    passwordResetExpires,
-    passwordResetToken,
-    resetToken,
-    resetURL
-  })
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Token sent to phone number',
-      resetURL,
-    });
-
-  }
-
-  else if (user.verified === false) {
-    return res.json({
-      status: 400,
-      message: "Sorry this account is not verified, verify to contd"
-    })
-  }
-  else {
-    return res.json({
-      status: 400,
-      message: "Sorry this account does not exist"
-    })
-  }
-  
-
-  } 
-  catch (err) {
-    console.log(err)
-    return res.json({
-      status: 400,
-      message: err
-    });
-  }
-
-  })
-
-
-  app.post("/api/resetpassword/:token", async (req, res) => {
-  const hashedToken = crypto
-    .createHash('sha256')
-    .update(req.params.token)
-    .digest('hex');
-
     const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: {$gt: Date.now() }
-    });
-
-    if (!user) {
-      return res.json({
-        status: 400, 
-        message: "Token is invalid or has expired"
-      })
-    }
-
-    user.password = req.body.password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-
-    await user.save();
-
-    return res.json({
-      status: 200,
-      message: "password changed"
+      email: req.body.email,
     })
-
-  })    
+    if(user){
+    const userAmount = user.withdraw[user.withdraw.length - 1].amount
+    return res.json({ status: 'ok', amount: userAmount})
+    }
+  }
+  catch(err) {
+      return res.json({ status: 'error', user: false })
+    }
+})  
 
 
 module.exports = app
